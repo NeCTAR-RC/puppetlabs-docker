@@ -135,6 +135,15 @@ jobs:
         echo STEP_ID=${{ matrix.platforms.image }}-${{ matrix.collection }}-2 >> $GITHUB_ENV
         echo STEP_START=$(date +%s) >> $GITHUB_ENV
 
+    - name: Cache Vagrant boxes
+      if: ${{ startsWith(matrix.platforms.image, 'macos') == true }}
+      uses: actions/cache@v2
+      with:
+        path: ~/.vagrant.d/boxes
+        key: ${{ runner.os }}-vagrant-${{ hashFiles('Vagrantfile') }}
+        restore-keys: |
+          ${{ runner.os }}-vagrant-
+
     - name: Provision test environment
       if: ${{ startsWith(matrix.platforms.image, 'macos') == true }}
       run: |
@@ -177,15 +186,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pr-
           ${{ runner.os }}-
-
-    - name: Cache Vagrant boxes
-      if: ${{ startsWith(matrix.platforms.image, 'macos') == true }}
-      uses: actions/cache@v2
-      with:
-        path: ~/.vagrant.d/boxes
-        key: ${{ runner.os }}-vagrant-${{ hashFiles('Vagrantfile') }}
-        restore-keys: |
-          ${{ runner.os }}-vagrant-
 
     - name: Prepare inventory file
       if: ${{ startsWith(matrix.platforms.image, 'ubuntu') == true }}
