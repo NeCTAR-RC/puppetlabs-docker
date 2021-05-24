@@ -1,6 +1,6 @@
 name: "nightly"
 
-on: [push, pull_request]
+on: [pull_request]
 
 env:
   HONEYCOMB_WRITEKEY: 7f3c63a70eecc61d635917de46bea4e6
@@ -63,7 +63,8 @@ jobs:
           sed -i 's/litmusimage\/ubuntu:16.04/ubuntu-16.04/g' matrix.txt
           sed -i 's/litmusimage\/ubuntu:18.04/ubuntu-18.04/g' matrix.txt
           sed -i 's/litmusimage\/ubuntu:20.04/ubuntu-20.04/g' matrix.txt
-          sed -i 's/windows-2019-core/windows-2019/g' matrix.txt
+          sed -i 's/windows-2016/macos-10.15/g' matrix.txt
+          sed -i 's/windows-2019-core/mascos-10.15/g' matrix.txt
           cat matrix.txt
         else
           echo  "::set-output name=matrix::{}"
@@ -141,7 +142,14 @@ jobs:
         for x in $(echo $image | tr '-' "\n"); do
           data+=("$x")
         done
-        VAGRANT_IMAGE="generic/${data[0]}${data[1]}"
+        re_linux="(^debian|centos)"
+        re_windows="^windows"
+        if [[ $image =~ $re_linux ]]; then
+          VAGRANT_IMAGE="generic/${data[0]}${data[1]}"
+        fi
+        if [[ $image =~ $re_windows ]]; then
+          VAGRANT_IMAGE="StefanScherer/${data[0]}_${data[1]}"
+        fi
         bundle exec rake "litmus:provision[vagrant,$VAGRANT_IMAGE]"
         echo ::group::=== REQUEST ===
         cat request.json || true
@@ -185,32 +193,6 @@ jobs:
         - name: winrm_nodes
           targets: []
         EOF
-  
-    - name: Prepare inventory file
-      if: ${{ startsWith(matrix.platforms.image, 'windows') == true }}
-      shell: pwsh
-      run: |
-        $Content = @'
-        ---
-        version: 2
-        groups:
-        - name: local
-          targets:
-          - uri: litmus_localhost
-            config:
-              transport: local
-        - name: ssh_nodes
-          targets: []
-        - name: winrm_nodes
-          targets: []
-        '@
-        $Content | Set-Content -Path spec/fixtures/litmus_inventory.yaml
-
-    - name: Install gems and puppet agent
-      if: ${{ startsWith(matrix.platforms.image, 'windows') == true }}
-      run: |
-        bundle install
-        bundle exec rake 'litmus:install_agent[${{ matrix.collection }}]'
 
     - name: Install gems and puppet agent
       if: ${{ startsWith(matrix.platforms.image, 'ubuntu') == true }}
@@ -239,34 +221,6 @@ jobs:
         echo STEP_ID=${{ matrix.platforms.image }}-${{ matrix.collection }}-3 >> $GITHUB_ENV
         echo STEP_START=$(date +%s) >> $GITHUB_ENV
         echo ::endgroup::
-
-    - name: Set up Cygwin
-      if: ${{ startsWith(matrix.platforms.image, 'windows') == true }}
-      uses: egor-tensin/setup-cygwin@v3
-      with:
-        platform: x64
-        packages: cmake python3
-    
-    - name: blah
-      if: ${{ startsWith(matrix.platforms.image, 'windows') == true }}
-      run: |
-        ls.exe -Al
-        pwd.exe
-
-    - name: Create /tmp directory
-      if: ${{ startsWith(matrix.platforms.image, 'windows') == true }}
-      shell: pwsh
-      run: |
-        New-Item -Path "C:\" -Name "tmp" -ItemType "directory"
-        $TmpDirectory = "C:\tmp"
-        $Acl = Get-ACL $TmpDirectory
-        $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("everyone","FullControl","ContainerInherit,Objectinherit","none","Allow")
-        $Acl.AddAccessRule($AccessRule)
-        Set-Acl $TmpDirectory $Acl
-
-    - name: Run acceptance tests
-      if: ${{ startsWith(matrix.platforms.image, 'windows') == true }}
-      run: bundle exec rake 'litmus:acceptance:localhost'
     
     - name: Run acceptance tests
       if: ${{ startsWith(matrix.platforms.image, 'ubuntu') == true }}
