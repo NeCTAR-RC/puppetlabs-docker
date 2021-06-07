@@ -156,12 +156,17 @@ jobs:
         re_linux="(^debian|centos)"
         re_windows="^windows"
         if [[ $image =~ $re_linux ]]; then
+          provisioner="vagrant"
           VAGRANT_IMAGE="generic/${data[0]}${data[1]}"
         fi
         if [[ $image =~ $re_windows ]]; then
-          VAGRANT_IMAGE="StefanScherer/${data[0]}_${data[1]}"
+          provisioner="provision_service"
+          VAGRANT_IMAGE="${data[0]}-${data[1]}"
+          if [[ "$data[1]" -eq "2019" ]]; then
+            VAGRANT_IMAGE="${data[0]}-${data[1]}-core"
+          fi
         fi
-        bundle exec rake "litmus:provision[vagrant,$VAGRANT_IMAGE]"
+        bundle exec rake "litmus:provision[$provisioner,$VAGRANT_IMAGE]"
         echo ::group::=== REQUEST ===
         cat request.json || true
         echo
