@@ -1,0 +1,6 @@
+[gerrit]
+host=review.rc.nectar.org.au
+port=29418
+project=NeCTAR-RC/puppetlabs-docker.git
+defaultbranch=nectar/v4.0.1
+
